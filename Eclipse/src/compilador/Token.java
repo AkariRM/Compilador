@@ -46,7 +46,8 @@ public class Token
 	{
 		return "Línea " + fila + ", Columna " + columna;
 	}
-
+	
+	
 	@Override
 	public String toString()
 	{
@@ -56,7 +57,7 @@ public class Token
 	// Enumeración de tipos de tokens
 	public enum Tipos
 	{ 
-		LiteralNumerico("^-?([1-9][0-9]*|0)(\\.([0-9]))?"),
+		LiteralNumerico("^-?([1-9][0-9]*|0)(\\.([0-9]+))?"),
 		LiteralCadena("\"(\\\\.|[^\"])*\""), 
 		LiteralCaracter("'(\\\\.|[^\\\\'])'"),
 		OperadorAritmetico("[+\\-*/%]"),
@@ -64,14 +65,15 @@ public class Token
 		PalabraReservada(
 				"(static|new|import|package|class|public|private|if|else|while|for|return|int|float|boolean|char|void|String|public|void|int|double|String|float|final|char)"),
 		OperadorLogico("(&&|\\|\\||!|&|\\|)"),
- 
+		
 		OperadorAsignacion("(=|\\+=|-=|\\*=|/=)"),  
 		OperadorComparacion("(==|!=|<=|>=|<|>)"), 
 		Delimitador("[{}()\\[\\];,]"), 
 		Identificador("[a-zA-Z_][a-zA-Z0-9_]*"),
 		CaracterInvalido("[^\\s\\w\\d\\+\\-\\*/%=&|!<>\"'.,;()\\[\\]{}]"),
 		EspacioBlanco("[ \\t\\r\\n]+");
-
+		 
+		
 		public final String patron;
 
 		Tipos(String s)
