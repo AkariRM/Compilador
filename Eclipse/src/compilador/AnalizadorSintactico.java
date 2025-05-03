@@ -2,57 +2,75 @@ package compilador;
 
 import java.util.List;
 import java.util.Stack;
+import java.util.Map;
+import java.util.HashMap;
 
 public class AnalizadorSintactico {
-    private final TablaPredictiva tabla;
 
-    public AnalizadorSintactico(TablaPredictiva tabla) {
-        this.tabla = tabla;
+    private final List<Token> tokens;
+    private int posicion;
+    private Stack<String> pila;
+
+    // Tabla LL(1) de ejemplo. Debes adaptarla a tu gramática.
+    private static final Map<String, Map<String, String[]>> tablaLL1 = new HashMap<>();
+
+    static {
+        // Ejemplo de una entrada:
+        // tablaLL1.get("E").put("id", new String[] {"T", "E'"});
+        // Define aquí tu gramática y tabla
     }
 
-    public boolean analizar(List<String> tokens) {
-        Stack<String> pila = new Stack<>();
-        pila.push("$");
-        pila.push("L");
+    public AnalizadorSintactico(List<Token> tokens) {
+        this.tokens = tokens;
+        this.posicion = 0;
+        this.pila = new Stack<>();
+    }
 
-        tokens.add("$");
-        int i = 0;
+    public boolean analizar() {
+        pila.push("$");
+        pila.push("Inicio"); // tu símbolo inicial
+
+        Token tokenActual = siguienteToken();
 
         while (!pila.isEmpty()) {
-            String cima = pila.peek();
-            String entrada = tokens.get(i);
+            String cima = pila.pop();
+            String terminal = tokenActual != null ? tokenActual.getTipo().name() : "$";
 
-            if (!tabla.contieneNoTerminal(cima) || cima.equals("$")) {
-                if (cima.equals(entrada)) {
-                    pila.pop();
-                    i++;
+            if (esTerminal(cima)) {
+                if (cima.equals(terminal)) {
+                    tokenActual = siguienteToken();
                 } else {
-                    System.out.println("Error sintáctico: se esperaba '" + cima + "', pero se encontró '" + entrada + "'");
+                    System.out.println("Error de sintaxis: se esperaba " + cima + " pero se encontró " + terminal);
                     return false;
                 }
             } else {
-                String produccion = tabla.obtenerProduccion(cima, entrada);
-                if (produccion == null) {
-                    System.out.println("Error: no hay producción para [" + cima + ", " + entrada + "]");
-                    return false;
-                }
-
-                pila.pop();
-                if (!produccion.equals("ε")) {
-                    String[] simbolos = produccion.trim().split("\\s+");
-                    for (int j = simbolos.length - 1; j >= 0; j--) {
-                        pila.push(simbolos[j]);
+                Map<String, String[]> fila = tablaLL1.get(cima);
+                if (fila != null && fila.containsKey(terminal)) {
+                    String[] produccion = fila.get(terminal);
+                    for (int i = produccion.length - 1; i >= 0; i--) {
+                        if (!produccion[i].equals("ε")) {
+                            pila.push(produccion[i]);
+                        }
                     }
+                } else {
+                    System.out.println("Error de sintaxis: no hay regla para [" + cima + ", " + terminal + "]");
+                    return false;
                 }
             }
         }
 
-        if (i == tokens.size()) {
-            System.out.println("Cadena válida.");
-            return true;
-        } else {
-            System.out.println("Error: tokens restantes no procesados.");
-            return false;
+        return true;
+    }
+
+    private boolean esTerminal(String simbolo) {
+        // Puedes mejorar esto si defines conjuntos explícitos
+        return simbolo.equals("$") || simbolo.matches("[A-Z_]+"); // Por convención
+    }
+
+    private Token siguienteToken() {
+        if (posicion < tokens.size()) {
+            return tokens.get(posicion++);
         }
+        return null;
     }
 }

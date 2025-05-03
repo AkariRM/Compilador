@@ -9,8 +9,7 @@ import java.awt.event.KeyEvent;
 import java.io.*;
 import javax.swing.undo.*;
 
-public class CompiladorUI
-{
+public class CompiladorUI {
 	private JTextArea areaTexto;
 	private JTextArea areaComponentes;
 	private JTextArea areaResultados;
@@ -19,8 +18,7 @@ public class CompiladorUI
 	private JFrame ventana;
 	private UndoManager undoManager = new UndoManager();
 
-	public void CrearMostrar()
-	{
+	public void CrearMostrar() {
 		ventana = new JFrame("Compilador - Nuevo Archivo");
 		ventana.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		ventana.setSize(800, 600);
@@ -62,12 +60,10 @@ public class CompiladorUI
 		compilar.setAccelerator(
 				KeyStroke.getKeyStroke(KeyEvent.VK_C, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK));
 		JMenuItem limpiar = new JMenuItem("Limpiar");
-		limpiar.addActionListener(e ->
-		{
+		limpiar.addActionListener(e -> {
 			int confirmacion = JOptionPane.showConfirmDialog(null, "¿Estás seguro que quieres borrar todo?",
 					"Confirmación", JOptionPane.YES_NO_OPTION);
-			if (confirmacion == JOptionPane.YES_OPTION)
-			{
+			if (confirmacion == JOptionPane.YES_OPTION) {
 				areaTexto.setText("");
 				areaComponentes.setText("");
 			}
@@ -162,20 +158,16 @@ public class CompiladorUI
 		areaTexto = new JTextArea();
 		areaTexto.setFont(new Font("Monospaced", Font.PLAIN, 12));
 
-		areaTexto.getDocument().addDocumentListener(new DocumentListener()
-		{
-			public void insertUpdate(DocumentEvent e)
-			{
+		areaTexto.getDocument().addDocumentListener(new DocumentListener() {
+			public void insertUpdate(DocumentEvent e) {
 				actualizarNumeracion();
 			}
 
-			public void removeUpdate(DocumentEvent e)
-			{
+			public void removeUpdate(DocumentEvent e) {
 				actualizarNumeracion();
 			}
 
-			public void changedUpdate(DocumentEvent e)
-			{
+			public void changedUpdate(DocumentEvent e) {
 				actualizarNumeracion();
 			}
 		});
@@ -247,114 +239,118 @@ public class CompiladorUI
 	}
 
 	private void Lex(String entrada) {
-	    areaComponentes.setText("");
-	    areaResultados.setText("");
-	    
-	    AnalizadorLexico analizador = new AnalizadorLexico();
-	    analizador.analizar(entrada);
-	    
-	    // Mostrar tokens
-	    areaComponentes.setText(analizador.getResultadoFormateado());
-	    
-	    // Mostrar errores de manera más destacada
-	    if (!analizador.getErrores().isEmpty()) {
-	        StringBuilder erroresStr = new StringBuilder("=== ERRORES ===\n");
-	        for (ErrorCompilacion error : analizador.getErrores()) {
-	            erroresStr.append("• ").append(error).append("\n");
-	        }
-	        areaResultados.setForeground(Color.RED);
-	        areaResultados.setText(erroresStr.toString());
-	    } else {
-	        areaResultados.setForeground(Color.BLACK);
-	        areaResultados.setText("✓ Análisis léxico completado sin errores");
-	    }
+		areaComponentes.setText("");
+		areaResultados.setText("");
+
+		AnalizadorLexico analizador = new AnalizadorLexico();
+		analizador.analizar(entrada);
+
+		// Mostrar tokens
+		areaComponentes.setText(analizador.getResultadoFormateado());
+
+		// Mostrar errores de manera más destacada
+		if (!analizador.getErrores().isEmpty()) {
+			StringBuilder erroresStr = new StringBuilder("=== ERRORES ===\n");
+			for (ErrorCompilacion error : analizador.getErrores()) {
+				erroresStr.append("• ").append(error).append("\n");
+			}
+			areaResultados.setForeground(Color.RED);
+			areaResultados.setText(erroresStr.toString());
+		} else {
+			areaResultados.setForeground(Color.BLACK);
+			areaResultados.setText("✓ Análisis léxico completado sin errores");
+		}
 	}
-	
-	private ImageIcon cargarIcono(String ruta)
-	{
+
+	private void Sin(String entrada) {
+		areaComponentes.setText("");
+		areaResultados.setText("");
+
+		AnalizadorLexico analizador = new AnalizadorLexico();
+		analizador.analizar(entrada);
+
+		// Mostrar tokens
+		areaComponentes.setText(analizador.getResultadoFormateado());
+
+		// Mostrar errores de manera más destacada
+		if (!analizador.getErrores().isEmpty()) {
+			StringBuilder erroresStr = new StringBuilder("=== ERRORES ===\n");
+			for (ErrorCompilacion error : analizador.getErrores()) {
+				erroresStr.append("• ").append(error).append("\n");
+			}
+			areaResultados.setForeground(Color.RED);
+			areaResultados.setText(erroresStr.toString());
+		} else {
+			areaResultados.setForeground(Color.BLACK);
+			areaResultados.setText("✓ Análisis sintactico completado sin errores");
+		}
+	}
+
+	private ImageIcon cargarIcono(String ruta) {
 		ImageIcon iconoOriginal = new ImageIcon(ruta);
 		Image imagenEscalada = iconoOriginal.getImage().getScaledInstance(24, 24, Image.SCALE_SMOOTH);
 		return new ImageIcon(imagenEscalada);
 	}
 
-	private void actualizarTitulo()
-	{
-		if (archivoActual != null)
-		{
+	private void actualizarTitulo() {
+		if (archivoActual != null) {
 			ventana.setTitle("Compilador - " + archivoActual.getName());
-		}
-		else 
-		{
+		} else {
 			ventana.setTitle("Compilador - Archivo sin Guardar");
 		}
 	}
 
-	private void actualizarNumeracion()
-	{
+	private void actualizarNumeracion() {
 		int totalLineas = areaTexto.getLineCount();
 		StringBuilder numeros = new StringBuilder();
-		for (int i = 1; i <= totalLineas; i++)
-		{
+		for (int i = 1; i <= totalLineas; i++) {
 			numeros.append(i).append("\n");
 		}
 		numeracionLineas.setText(numeros.toString());
 	}
 
-	private void abrirArchivo()
-	{
+	private void abrirArchivo() {
 		JFileChooser selectorArchivos = new JFileChooser();
 		FileNameExtensionFilter filtro = new FileNameExtensionFilter("Archivos ARM", "arm");
 		selectorArchivos.setFileFilter(filtro);
 
 		int resultado = selectorArchivos.showOpenDialog(null);
 
-		if (resultado == JFileChooser.APPROVE_OPTION)
-		{
+		if (resultado == JFileChooser.APPROVE_OPTION) {
 			archivoActual = selectorArchivos.getSelectedFile();
-			try (BufferedReader lector = new BufferedReader(new FileReader(archivoActual)))
-			{
+			try (BufferedReader lector = new BufferedReader(new FileReader(archivoActual))) {
 				areaTexto.setText("");
 				String linea;
-				while ((linea = lector.readLine()) != null)
-				{
+				while ((linea = lector.readLine()) != null) {
 					areaTexto.append(linea + "\n");
 				}
 				actualizarNumeracion();
 				actualizarTitulo();
-			}
-			catch (IOException e)
-			{
+			} catch (IOException e) {
 				JOptionPane.showMessageDialog(null, "Error al abrir el archivo", "Error", JOptionPane.ERROR_MESSAGE);
 			}
 		}
 	}
 
-	private void guardarArchivo()
-	{
-		if (archivoActual != null)
-		{
+	private void guardarArchivo() {
+		if (archivoActual != null) {
 			escribirEnArchivo(archivoActual);
-		}
-		else
-		{
+		} else {
 			guardarArchivoComo();
 		}
 	}
 
-	private void guardarArchivoComo()
-	{
+	private void guardarArchivoComo() {
 		JFileChooser selectorArchivos = new JFileChooser();
 		selectorArchivos.setDialogTitle("Guardar archivo");
 		selectorArchivos.setFileFilter(new FileNameExtensionFilter("Archivos ARM (*.arm)", "arm"));
 
 		int resultado = selectorArchivos.showSaveDialog(null);
 
-		if (resultado == JFileChooser.APPROVE_OPTION)
-		{
+		if (resultado == JFileChooser.APPROVE_OPTION) {
 			archivoActual = selectorArchivos.getSelectedFile();
 
-			if (!archivoActual.getName().toLowerCase().endsWith(".arm"))
-			{
+			if (!archivoActual.getName().toLowerCase().endsWith(".arm")) {
 				archivoActual = new File(archivoActual.getAbsolutePath() + ".arm");
 			}
 
@@ -362,93 +358,72 @@ public class CompiladorUI
 		}
 	}
 
-	private void nuevoArchivo()
-	{
+	private void nuevoArchivo() {
 		Object[] opciones = { "Guardar", "No guardar", "Cancelar" };
 
 		int confirmacion = JOptionPane.showOptionDialog(null,
 				"¿Quieres crear un nuevo archivo? Se perderán los cambios no guardados.", "Nuevo Archivo",
 				JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, opciones, opciones[0]);
 
-		if (confirmacion == 0)
-		{
+		if (confirmacion == 0) {
 			int guardarConfirmacion = JOptionPane.showConfirmDialog(null,
 					"¿Quieres guardar los cambios antes de crear un nuevo archivo?", "Guardar Archivo",
 					JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
-			if (guardarConfirmacion == JOptionPane.YES_OPTION)
-			{
+			if (guardarConfirmacion == JOptionPane.YES_OPTION) {
 				guardarArchivo();
 			}
 
 			areaTexto.setText("");
 			archivoActual = null;
 			actualizarTitulo();
+		} else if (confirmacion == 1) {
+			areaTexto.setText("");
+			archivoActual = null;
+			actualizarTitulo();
 		}
-		else
-			if (confirmacion == 1)
-			{
-				areaTexto.setText("");
-				archivoActual = null;
-				actualizarTitulo(); 
-			}
 	}
 
-	private void escribirEnArchivo(File archivo)
-	{
-		try (BufferedWriter escritor = new BufferedWriter(new FileWriter(archivo)))
-		{
+	private void escribirEnArchivo(File archivo) {
+		try (BufferedWriter escritor = new BufferedWriter(new FileWriter(archivo))) {
 			escritor.write(areaTexto.getText());
 			JOptionPane.showMessageDialog(null, "Archivo guardado correctamente", "Éxito",
 					JOptionPane.INFORMATION_MESSAGE);
 			actualizarTitulo();
-		}
-		catch (IOException e)
-		{
+		} catch (IOException e) {
 			JOptionPane.showMessageDialog(null, "Error al guardar el archivo", "Error", JOptionPane.ERROR_MESSAGE);
 		}
 	}
 
-	private void deshacer()
-	{
+	private void deshacer() {
 		if (undoManager.canUndo())
 			undoManager.undo();
 	}
 
-	private void rehacer()
-	{
-		if (undoManager.canRedo())
-		{
+	private void rehacer() {
+		if (undoManager.canRedo()) {
 			undoManager.redo();
 		}
 	}
 
-	private void Cortar()
-	{
+	private void Cortar() {
 		areaTexto.cut();
 	}
 
-	private void Copiar()
-	{
+	private void Copiar() {
 		areaTexto.copy();
 	}
 
-	private void Pegar()
-	{
+	private void Pegar() {
 		areaTexto.paste();
 	}
 
-	private void Todo()
-	{
+	private void Todo() {
 		areaTexto.selectAll();
 	}
-	
 
-
-	public static void main(String[] args)
-	{
-		SwingUtilities.invokeLater(() ->
-		{
+	public static void main(String[] args) {
+		SwingUtilities.invokeLater(() -> {
 			CompiladorUI compiladorUI = new CompiladorUI();
 			compiladorUI.CrearMostrar();
 		});
