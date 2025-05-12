@@ -1,4 +1,4 @@
-package compilador;
+package compiladorPruebas;
 
 import java.util.Stack;
 
