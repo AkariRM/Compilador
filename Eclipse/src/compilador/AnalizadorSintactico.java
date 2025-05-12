@@ -1,128 +1,137 @@
 package compilador;
 
-import java.util.Stack;
+import java.util.*;
 
 public class AnalizadorSintactico {
 
-	// Tabla predictiva
-	private String[][] tabla_Predictiva = {
-			// id num litcad litc true false ( ) ! * / + - < > <= >= == != && || $
-			/* L */ { "R L'", "R L'", "R L'", "R L'", "R L'", "R L'", "R L'", "saltar", "R L'", "saltar", "saltar",
-					"saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar",
-					"saltar" },
-			/* L' */ { "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "ε", "saltar", "ε", "ε",
-					"ε", "ε", "ε", "ε", "ε", "ε", "ε", "and R L'", "or R L'", "ε" },
-			/* R */ { "E R'", "E R'", "E R'", "E R'", "E R'", "E R'", "E R'", "saltar", "E R'", "saltar", "saltar",
-					"saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar",
-					"saltar" },
-			/* R' */ { "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "< E", "> E", "<= E", ">= E",
-					"== E", "!= E", "ε", "ε", "ε" },
-			/* E */ { "T E'", "T E'", "T E'", "T E'", "T E'", "T E'", "T E'", "saltar", "T E'", "saltar", "saltar",
-					"saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar",
-					"saltar" },
-			/* E' */ { "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "+ T E'", "- T E'", "ε", "ε", "ε", "ε",
-					"ε", "ε", "ε", "ε" },
-			/* T */ { "F T'", "F T'", "F T'", "F T'", "F T'", "F T'", "F T'", "saltar", "F T'", "saltar", "saltar",
-					"saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar",
-					"saltar" },
-			/* T' */ { "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "ε", "* F T'", "/ F T'", "ε", "ε", "ε", "ε", "ε", "ε",
-					"ε", "ε", "ε", "ε" },
-			/* F */ { "id", "num", "litcad", "litc", "true", "false", "( E )", "saltar", "! F", "saltar", "saltar",
-					"saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar", "saltar",
-					"saltar" } };
+	private Deque<String> pila = new ArrayDeque<>();
+	private List<Token> tokens;
+	private int indiceToken = 0;
+	private List<String> errores = new ArrayList<>();
 
-	public boolean analizar(String[] entrada) {
-		Stack<String> pila = new Stack<>();
-		pila.push("L");
-		int i = 0;
-		String token = entrada[i];
+	public AnalizadorSintactico(List<Token> tokens) {
+		this.tokens = tokens;
+		pila.push("L"); // símbolo inicial
+	}
 
+	public boolean analizar() {
 		while (!pila.isEmpty()) {
-			String cimaPila = pila.peek();
-			if (esTerminal(cimaPila)) {
-				if (cimaPila.equals(token)) {
-					pila.pop();
-					i++;
-					if (i < entrada.length) {
-						token = entrada[i];
-					}
-				} else {
-					return false; // Recuperar el error
-				}
+			String cima = pila.peek();
+			String tokenActual = getTokenActual();
+
+			if (cima.equals(tokenActual)) {
+				pila.pop();
+				indiceToken++;
+			} else if (esTerminal(cima)) {
+				reportarError("Se esperaba '" + cima + "' pero se encontró '" + tokenActual + "'");
+				pila.pop();
 			} else {
-				// Buscar en la tabla
-				int columna = obtenerIndiceTerminal(token);
-				if (columna == -1) {
-					return false; // Recuperar el error
-				}
-				String produccion = tabla_Predictiva[getIndiceNoTerminal(cimaPila)][columna];
-				if (produccion.equals("ε") || produccion.equals("saltar")) {
-					pila.pop(); // Salta ( sacarlo de la pila
+				String produccion = obtenerProduccion(cima, tokenActual);
+				if (produccion == null) {
+					reportarError("No hay producción para [" + cima + ", " + tokenActual + "]");
+					pila.pop();
 				} else {
 					pila.pop();
-					// Poner en la pila la producción en orden inverso (lo de la auxiliar)
-					String[] produccionTokens = produccion.split(" ");
-					for (int j = produccionTokens.length - 1; j >= 0; j--) {
-						if (!produccionTokens[j].equals("ε")) {
-							pila.push(produccionTokens[j]);
+					if (!produccion.equals("Ɛ")) {
+						List<String> simbolos = Arrays.asList(produccion.split(" "));
+						for (int i = simbolos.size() - 1; i >= 0; i--) {
+							pila.push(simbolos.get(i));
 						}
 					}
 				}
 			}
-		}
 
-		return i == entrada.length; // Si la pila está vacía y la entrada está procesada
+			if (indiceToken >= tokens.size()) {
+				break;
+			}
+		}
+		return errores.isEmpty();
 	}
 
-	// Comprobar que si e sun terminal
+	private String getTokenActual() {
+		if (indiceToken >= tokens.size())
+			return "$";
+		Token token = tokens.get(indiceToken);
+		return token.getTipo().toString(); // Se usa el tipo del token (como "id", "num", etc.)
+	}
+
+	private void reportarError(String mensaje) {
+		errores.add("Error sintáctico: " + mensaje);
+	}
+
 	private boolean esTerminal(String simbolo) {
-		String[] terminales = { "id", "num", "litcad", "litc", "true", "false", "(", ")", "!", "*", "/", "+", "-", "<",
-				">", "<=", ">=", "==", "!=", "&&", "||", "$" };
-		for (String t : terminales) {
-			if (t.equals(simbolo)) {
-				return true;
-			}
-		}
-		return false;
+		return !Character.isUpperCase(simbolo.charAt(0));
 	}
 
-	// Obtener el indice de la tabla
-	private int obtenerIndiceTerminal(String token) {
-		String[] terminales = {
-				  "id", "num", "litcad", "litc", "true", "false", "(", ")", "!", "*", "/", "+", "-",
-				  "<", ">", "<=", ">=", "==", "!=", "&&", "||", "$"
-				}; // <-- Esto da exactamente 22 elementos
-
-
-		for (int i = 0; i < terminales.length; i++) {
-			if (terminales[i].equals(token)) {
-				return i;
-			}
+	private String obtenerProduccion(String noTerminal, String terminal) {
+		Map<String, String> fila = tablaPredictiva.get(noTerminal);
+		if (fila != null) {
+			return fila.getOrDefault(terminal, null);
 		}
-		return -1; // No encontrado
+		return null;
 	}
 
-	// Método para obtener el índice del no terminal en la tabla
-	private int getIndiceNoTerminal(String noTerminal) {
-		String[] noTerminales = { "L", "L'", "R", "R'", "E", "E'", "T", "T'", "F" };
-		for (int i = 0; i < noTerminales.length; i++) {
-			if (noTerminales[i].equals(noTerminal)) {
-				return i;
-			}
-		}
-		return -1; // No encontrado
+	private static final Map<String, Map<String, String>> tablaPredictiva = crearTabla();
+
+	private static Map<String, Map<String, String>> crearTabla() {
+		Map<String, Map<String, String>> tabla = new HashMap<>();
+
+		tabla.put("L", map("id", "R L'", "num", "R L'", "litcad", "R L'", "litc", "R L'", "true", "R L'", "false",
+				"R L'", "(", "R L'", "!", "R L'", "write", "R L'", "if", "R L'", "$", "Ɛ"));
+
+		tabla.put("L'", map("&&", "&& R L'", "||", "|| R L'", "'", "'' RL'", "(", "( R L'", ")", "Ɛ", "*", "Ɛ", "/",
+				"Ɛ", "+", "Ɛ", "-", "Ɛ", "<", "Ɛ", ">", "Ɛ", "<=", "Ɛ", ">=", "Ɛ", "==", "Ɛ", "!=", "Ɛ", "$", "Ɛ"));
+
+		tabla.put("R", map("id", "E R'", "num", "E R'", "litcad", "E R'", "litc", "E R'", "true", "E R'", "false",
+				"E R'", "(", "E R'", "!", "E R'", "write", "E R'", "if", "E R'"));
+
+		tabla.put("R'", map(">", "> E", "<", "< E", ">=", ">= E", "<=", "<= E", "==", "== E", "!=", "!= E", "(", "( E",
+				")", "Ɛ", "*", "Ɛ", "/", "Ɛ", "+", "Ɛ", "-", "Ɛ", "&&", "Ɛ", "||", "Ɛ", "'", "Ɛ", "$", "Ɛ"));
+
+		tabla.put("E", map("id", "T E'", "num", "T E'", "litcad", "T E'", "litc", "T E'", "true", "T E'", "false",
+				"T E'", "(", "T E'", "!", "T E'", "write", "T E'", "if", "T E'"));
+
+		tabla.put("E'", map("+", "+ T E'", "-", "- T E'", "(", "( T E'", ")", "Ɛ", "*", "Ɛ", "/", "Ɛ", ">", "Ɛ", "<",
+				"Ɛ", ">=", "Ɛ", "<=", "Ɛ", "==", "Ɛ", "!=", "Ɛ", "&&", "Ɛ", "||", "Ɛ", "'", "Ɛ", "$", "Ɛ"));
+
+		tabla.put("T", map("id", "F T'", "num", "F T'", "litcad", "F T'", "litc", "F T'", "true", "F T'", "false",
+				"F T'", "(", "F T'", "!", "F T'", "write", "F T'", "if", "F T'"));
+
+		tabla.put("T'", map("*", "* F T'", "/", "/ F T'", "(", "( F T'", ")", "Ɛ", "+", "Ɛ", "-", "Ɛ", ">", "Ɛ", "<",
+				"Ɛ", ">=", "Ɛ", "<=", "Ɛ", "==", "Ɛ", "!=", "Ɛ", "&&", "Ɛ", "||", "Ɛ", "'", "Ɛ", "$", "Ɛ"));
+
+		tabla.put("F", map("id", "id", "num", "num", "litcad", "litcad", "litc", "litc", "true", "true", "false",
+				"false", "(", "( L )", "!", "! L", "write", "write", "if", "if"));
+
+		tabla.put("bloque", map("{", "{ sentencias }"));
+
+		tabla.put("sentencia",
+				map("id", "id = L ;", "if", "if ( L ) then bloque sigif", "write", "write ( lista_arg ) ;"));
+
+		tabla.put("sentencias", map("id", "sentencia sentencias", "if", "sentencia sentencias", "write",
+				"sentencia sentencias", "}", "Ɛ"));
+
+		tabla.put("sigif", map("id", "Ɛ", "if", "Ɛ", "else", "else bloque", "write", "Ɛ", "}", "Ɛ"));
+
+		tabla.put("lista_arg",
+				map("id", "L lista_arg'", "num", "L lista_arg'", "(", "L lista_arg'", "true", "L lista_arg'", "false",
+						"L lista_arg'", "litcad", "L lista_arg'", "litc", "L lista_arg'", "!", "L lista_arg'", "write",
+						"L lista_arg'"));
+
+		tabla.put("lista_arg'", map(",", ", L lista_arg'", ")", "Ɛ"));
+
+		return tabla;
 	}
 
-	// Metodo de prueba
-	public static void main(String[] args) {
-		AnalizadorSintactico analizador = new AnalizadorSintactico();
-
-		String[] entrada = { "id", "+", "num", "*", "true", "$" };
-
-		if (analizador.analizar(entrada)) {
-			System.out.println("Entrada válida");
-		} else {
-			System.out.println("Error sintáctico");
+	private static Map<String, String> map(String... entries) {
+		Map<String, String> map = new HashMap<>();
+		for (int i = 0; i < entries.length; i += 2) {
+			map.put(entries[i], entries[i + 1]);
 		}
+		return map;
+	}
+
+	public List<String> getErrores() {
+		return errores;
 	}
 }
