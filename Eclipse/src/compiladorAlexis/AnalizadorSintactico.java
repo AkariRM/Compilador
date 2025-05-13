@@ -1,4 +1,4 @@
-package compilador;
+package compiladorAlexis;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
