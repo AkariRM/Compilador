@@ -308,5 +308,10 @@ public class AnalizadorLexico {
 		}
 		return sb.toString();
 	}
+	
+	public List<Token> getTokensValidos() {
+	    return Collections.unmodifiableList(tokens); // Ya contiene solo tokens válidos
+	}
+
 
 }

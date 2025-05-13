@@ -276,33 +276,39 @@ public class CompiladorUI {
 		// Mostrar tokens en el área de componentes
 		areaComponentes.setText(analizador.getResultadoFormateado());
 
-		// Procesar errores léxicos
+		// Mostrar errores léxicos (si hay)
+		StringBuilder resultadoFinal = new StringBuilder();
 		if (!analizador.getErrores().isEmpty()) {
-			StringBuilder erroresStr = new StringBuilder("=== ERRORES LÉXICOS ===\n");
+			resultadoFinal.append("=== ERRORES LÉXICOS ===\n");
 			for (ErrorCompilacion error : analizador.getErrores()) {
-				erroresStr.append("• ").append(error).append("\n");
+				resultadoFinal.append("• ").append(error).append("\n");
 			}
-			areaResultados.setForeground(Color.RED);
-			areaResultados.setText(erroresStr.toString());
-			return; // Detener si hay errores léxicos
 		}
 
-		// 2. Análisis Sintáctico (solo si no hay errores léxicos)
-		AnalizadorSintactico sintactico = new AnalizadorSintactico(analizador.getTokens());
+		// 2. Análisis Sintáctico (se ejecuta aunque haya errores léxicos)
+		AnalizadorSintactico sintactico = new AnalizadorSintactico(analizador.getTokensValidos()); // Usa solo tokens válidos
 		boolean sintaxisCorrecta = sintactico.analizar();
 
-		// Mostrar resultados sintácticos
+		// Mostrar errores sintácticos (si hay)
 		if (!sintaxisCorrecta) {
-			StringBuilder erroresSintacticos = new StringBuilder("=== ERRORES SINTÁCTICOS ===\n");
+			resultadoFinal.append("\n=== ERRORES SINTÁCTICOS ===\n");
 			for (String error : sintactico.getErrores()) {
-				erroresSintacticos.append("• ").append(error).append("\n");
+				resultadoFinal.append("• ").append(error).append("\n");
 			}
 			areaResultados.setForeground(Color.RED);
-			areaResultados.setText(erroresSintacticos.toString());
 		} else {
-			areaResultados.setForeground(new Color(0, 128, 0)); // Verde oscuro
-			areaResultados.setText("✓ Análisis sintáctico completado sin errores");
+			if (resultadoFinal.length() == 0) {
+				resultadoFinal.append("✓ Análisis sintáctico completado sin errores");
+				areaResultados.setForeground(new Color(0, 128, 0)); // Verde oscuro
+			} else {
+				// Si hubo errores léxicos pero no sintácticos
+				resultadoFinal.append("\n✓ Análisis sintáctico completado sin errores");
+				areaResultados.setForeground(new Color(255, 140, 0)); // Naranja oscuro
+			}
 		}
+
+		// Mostrar resultado final
+		areaResultados.setText(resultadoFinal.toString());
 	}
 
 	private ImageIcon cargarIcono(String ruta) {
