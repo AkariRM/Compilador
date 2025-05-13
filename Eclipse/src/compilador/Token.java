@@ -32,29 +32,27 @@ public class Token {
 
     public String getClaveSintactica() {
         switch (tipo) {
-            // Palabras reservadas
-            case Inicio:       return "inicio";
-            case Fin:         return "fin";
-            case Si:          return "si";
-            case Mientras:    return "mientras";
-            case Para:        return "para";
-            case Mostrar:     return "mostrar";
-            case Leer:        return "leer";
-            case Tipo:        return "tipo";
-            
-            // Tipos de datos
-            case Entero:      return "entero";
-            case Decimal:    return "decimal";
-            case Cadena:     return "cadena";
-            case LiteralCaracter:   return "caracter";
-            case Booleano:   return "booleano";
-            
+     // Palabras reservadas
+        	case Inicio:    return "inicio";
+        	case Fin:      return "fin";
+        	case Si:       return "si";
+        	case SiNo:     return "si_no";  // Ahora reconocido
+        	case Mientras: return "mientras";
+        	case Para:     return "para";
+        	case Mostrar:  return "mostrar";
+        	case Leer:     return "leer";
+        
+        // Tipos de datos
+        	case Entero:   return "entero";
+        	case Decimal: return "decimal";
+        	case Cadena:  return "cadena";
+        	case Booleano: return "booleano";
             
             // Valores literales
             case LiteralNumerico:
-                return valor.contains(".") ? "decimal" : "entero";
-            case LiteralCadena:    return "cadena";//Cambiar por valor
-            case LiteralBooleano:  return valor;
+                return valor.contains(".") ? "decimal" : "num";
+            case LiteralCadena:    return "litcad";
+            case LiteralBooleano:  return valor.equals("verdadero") ? "verdadero" : "falso";
             
             // Identificadores
             case Identificador:    return "id";
@@ -63,22 +61,10 @@ public class Token {
             case OperadorAritmetico:  return valor;
             case OperadorComparacion: return valor;
             case OperadorLogico:      return valor;
-            case OperadorAsignacion:   return "=";
+            case OperadorAsignacion:  return "=";
             
             // Delimitadores
-            case Delimitador:
-                switch (valor) {
-                    case ";": return ";";
-                    case "(": return "(";
-                    case ")": return ")";
-                    case "{": return "{";
-                    case "}": return "}";
-                    default:  return valor;
-                }
-            
-            // Valores booleanos
-            case Verdadero:   return "verdadero";
-            case Falso:      return "falso";
+            case Delimitador: return valor; // ";", "(", ")", "{", "}"
             
             default:
                 return "ERROR";
@@ -90,6 +76,7 @@ public class Token {
         Inicio("inicio"),
         Fin("fin"),
         Si("si"),
+        SiNo("si_no"), 
         Mientras("mientras"),
         Para("para"),
         Mostrar("mostrar"),

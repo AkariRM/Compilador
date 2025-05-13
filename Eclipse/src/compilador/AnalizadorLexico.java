@@ -67,18 +67,13 @@ public class AnalizadorLexico {
 	private void procesarTokensValidos(String linea, int fila) {
 		// Patrón para palabras reservadas y símbolos
 		Pattern patronPalabras = Pattern.compile(
-				"\\b(inicio|fin|si|mientras|para|mostrar|leer|entero|decimal|cadena|booleano|verdadero|falso)\\b"
-						+ "|&&|\\|\\||==|!=|<=|>=|[+\\-*/%=<>();(){}\\[\\]]");
+			    "\\b(inicio|fin|si|si_no|mientras|para|mostrar|leer|entero|decimal|cadena|booleano|verdadero|falso)\\b"
+			    + "|&&|\\|\\||==|!=|<=|>=|[+\\-*/%=<>();(){}\\[\\]]");
 
 		// Patrón para identificadores, literales y otros tokens
 		Pattern patronGeneral = Pattern.compile("(?<palabra>" + patronPalabras.pattern() + ")"
-			    + "|(?<identificador>[a-zA-Z_][a-zA-Z0-9_]*)"
-			    + "|(?<numero>-?([1-9][0-9]*|0)(\\.[0-9]+)?)"
-			    + "|(?<cadena>\".*?(?<!\\\\)\")"
-			    + "|(?<caracter>'(\\\\.|[^'])')"
-			    + "|(?<espacio>\\s+)");
-
-
+				+ "|(?<identificador>[a-zA-Z_][a-zA-Z0-9_]*)" + "|(?<numero>-?([1-9][0-9]*|0)(\\.[0-9]+)?)"
+				+ "|(?<cadena>\".*?(?<!\\\\)\")" + "|(?<caracter>'(\\\\.|[^'])')" + "|(?<espacio>\\s+)");
 
 		Matcher matcher = patronGeneral.matcher(linea);
 		int columna = 1;
@@ -107,6 +102,8 @@ public class AnalizadorLexico {
 			return Token.Tipos.Inicio;
 		case "fin":
 			return Token.Tipos.Fin;
+		 case "si_no": 
+			 return Token.Tipos.SiNo;
 		case "si":
 			return Token.Tipos.Si;
 		case "mientras":
@@ -171,7 +168,7 @@ public class AnalizadorLexico {
 		if (matcher.group("cadena") != null)
 			return Token.Tipos.LiteralCadena;
 		if (matcher.group("caracter") != null)
-		    return Token.Tipos.LiteralCaracter;
+			return Token.Tipos.LiteralCaracter;
 		return null;
 	}
 
@@ -192,11 +189,11 @@ public class AnalizadorLexico {
 			}
 			break;
 		case LiteralCaracter:
-		    if (lexema.length() < 3 || lexema.charAt(0) != '\'' || lexema.charAt(lexema.length() - 1) != '\'') {
-		        errores.add(new ErrorCompilacion("Literal de carácter mal formado: '" + lexema + "'", fila, columna,
-		                ErrorCompilacion.TipoError.LEXICO));
-		    }
-		    break;
+			if (lexema.length() < 3 || lexema.charAt(0) != '\'' || lexema.charAt(lexema.length() - 1) != '\'') {
+				errores.add(new ErrorCompilacion("Literal de carácter mal formado: '" + lexema + "'", fila, columna,
+						ErrorCompilacion.TipoError.LEXICO));
+			}
+			break;
 
 		}
 	}
@@ -308,10 +305,9 @@ public class AnalizadorLexico {
 		}
 		return sb.toString();
 	}
-	
-	public List<Token> getTokensValidos() {
-	    return Collections.unmodifiableList(tokens); // Ya contiene solo tokens válidos
-	}
 
+	public List<Token> getTokensValidos() {
+		return Collections.unmodifiableList(tokens); // Ya contiene solo tokens válidos
+	}
 
 }
