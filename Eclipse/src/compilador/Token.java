@@ -30,57 +30,101 @@ public class Token {
         return "Token{" + "tipo=" + tipo + ", valor='" + valor + '\'' + ", fila=" + fila + ", columna=" + columna + '}';
     }
 
-    
     public String getClaveSintactica() {
         switch (tipo) {
-            case PalabraReservada:
-            case MainReservado:
-                return valor;
-
-            case OperadorAritmetico:
-            case OperadorLogico:
-            case OperadorAsignacion:
-            case OperadorComparacion:
-            case Delimitador:
-                return valor;
-
-            case Identificador:
-                return "id";
-
+            // Palabras reservadas
+            case Inicio:       return "inicio";
+            case Fin:         return "fin";
+            case Si:          return "si";
+            case Mientras:    return "mientras";
+            case Para:        return "para";
+            case Mostrar:     return "mostrar";
+            case Leer:        return "leer";
+            case Tipo:        return "tipo";
+            
+            // Tipos de datos
+            case Entero:      return "entero";
+            case Decimal:    return "decimal";
+            case Cadena:     return "cadena";
+            case LiteralCaracter:   return "caracter";
+            case Booleano:   return "booleano";
+            
+            
+            // Valores literales
             case LiteralNumerico:
-                return "num";
-
-            case LiteralCadena:
-                return "cadena";
-
-            case LiteralCaracter:
-                return "caracter";
-
-            case EspacioBlanco:
-                return "ε";
-
-            case CaracterInvalido:
+                return valor.contains(".") ? "decimal" : "entero";
+            case LiteralCadena:    return "cadena";//Cambiar por valor
+            case LiteralBooleano:  return valor;
+            
+            // Identificadores
+            case Identificador:    return "id";
+            
+            // Operadores
+            case OperadorAritmetico:  return valor;
+            case OperadorComparacion: return valor;
+            case OperadorLogico:      return valor;
+            case OperadorAsignacion:   return "=";
+            
+            // Delimitadores
+            case Delimitador:
+                switch (valor) {
+                    case ";": return ";";
+                    case "(": return "(";
+                    case ")": return ")";
+                    case "{": return "{";
+                    case "}": return "}";
+                    default:  return valor;
+                }
+            
+            // Valores booleanos
+            case Verdadero:   return "verdadero";
+            case Falso:      return "falso";
+            
+            default:
                 return "ERROR";
         }
-
-        return tipo.name();
     }
 
-    
     public enum Tipos {
+        // Palabras reservadas
+        Inicio("inicio"),
+        Fin("fin"),
+        Si("si"),
+        Mientras("mientras"),
+        Para("para"),
+        Mostrar("mostrar"),
+        Leer("leer"),
+        Tipo("entero|decimal|cadena|booleano"),
+        
+        // Tipos de datos
+        Entero("entero"),
+        Decimal("decimal"),
+        Cadena("cadena"),
+        Booleano("booleano"),
+        
+        // Literales
         LiteralNumerico("^-?([1-9][0-9]*|0)(\\.([0-9]+))?"),
         LiteralCadena("\"(\\\\.|[^\"])*\""),
-        LiteralCaracter("'(\\\\.|[^\\\\'])'"),
-        OperadorAritmetico("[+\\-*/%]"),
-        MainReservado("main"),
-        PalabraReservada(
-            "(static|new|import|package|class|public|private|if|else|while|for|return|int|float|boolean|char|void|String|final|double)"),
-        OperadorLogico("(&&|\\|\\||!|&|\\|)"),
-        OperadorAsignacion("(=|\\+=|-=|\\*=|/=)"),
-        OperadorComparacion("(==|!=|<=|>=|<|>)"),
-        Delimitador("[{}()\\[\\];,]"),
+        LiteralCaracter("'(\\\\.|[^'])'"),
+        LiteralBooleano("verdadero|falso"),
+        
+        // Identificadores
         Identificador("[a-zA-Z_][a-zA-Z0-9_]*"),
-        CaracterInvalido("[^\\s\\w\\d\\+\\-\\*/%=&|!<>\"'.,;()\\[\\]{}]"),
+        
+        // Operadores
+        OperadorAritmetico("[+\\-*/%]"),
+        OperadorComparacion("(==|!=|<=|>=|<|>)"),
+        OperadorLogico("(&&|\\|\\|)"),
+        OperadorAsignacion("="),
+        
+        // Delimitadores
+        Delimitador("[;(){}\\[\\]]"),
+        
+        // Valores booleanos
+        Verdadero("verdadero"),
+        Falso("falso"),
+        
+        // Espacios (no se incluyen en los tokens)
         EspacioBlanco("[ \\t\\r\\n]+");
 
         public final String patron;
