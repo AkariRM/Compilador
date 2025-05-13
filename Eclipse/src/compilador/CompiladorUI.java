@@ -127,14 +127,17 @@ public class CompiladorUI {
 
 		// Botón Analizar
 		ImageIcon iconoAnalizar = cargarIcono("img/analizar.png");
-		JButton botonAnalizar = new JButton("Analizar", iconoAnalizar);
+		JButton botonAnalizar = new JButton("Lexico", iconoAnalizar);
 		botonAnalizar.addActionListener(e -> Lex(areaTexto.getText()));
 		barraHerramientas.add(botonAnalizar);
 
 		// Botón Compilar
 		ImageIcon iconoCompilar = cargarIcono("img/compilar.png");
-		JButton botonCompilar = new JButton("Compilar", iconoCompilar);
-		botonCompilar.addActionListener(e -> areaResultados.setText("Compilando..."));
+		JButton botonCompilar = new JButton("Analisis Completo", iconoCompilar);
+		botonCompilar.addActionListener(e -> {
+			String codigo = areaTexto.getText();
+			Sin(codigo);
+		});
 		barraHerramientas.add(botonCompilar);
 
 		ventana.add(barraHerramientas, BorderLayout.NORTH);
@@ -266,23 +269,39 @@ public class CompiladorUI {
 		areaComponentes.setText("");
 		areaResultados.setText("");
 
+		// 1. Análisis Léxico
 		AnalizadorLexico analizador = new AnalizadorLexico();
 		analizador.analizar(entrada);
 
-		// Mostrar tokens
+		// Mostrar tokens en el área de componentes
 		areaComponentes.setText(analizador.getResultadoFormateado());
 
-		// Mostrar errores de manera más destacada
+		// Procesar errores léxicos
 		if (!analizador.getErrores().isEmpty()) {
-			StringBuilder erroresStr = new StringBuilder("=== ERRORES ===\n");
+			StringBuilder erroresStr = new StringBuilder("=== ERRORES LÉXICOS ===\n");
 			for (ErrorCompilacion error : analizador.getErrores()) {
 				erroresStr.append("• ").append(error).append("\n");
 			}
 			areaResultados.setForeground(Color.RED);
 			areaResultados.setText(erroresStr.toString());
+			return; // Detener si hay errores léxicos
+		}
+
+		// 2. Análisis Sintáctico (solo si no hay errores léxicos)
+		AnalizadorSintactico sintactico = new AnalizadorSintactico(analizador.getTokens());
+		boolean sintaxisCorrecta = sintactico.analizar();
+
+		// Mostrar resultados sintácticos
+		if (!sintaxisCorrecta) {
+			StringBuilder erroresSintacticos = new StringBuilder("=== ERRORES SINTÁCTICOS ===\n");
+			for (String error : sintactico.getErrores()) {
+				erroresSintacticos.append("• ").append(error).append("\n");
+			}
+			areaResultados.setForeground(Color.RED);
+			areaResultados.setText(erroresSintacticos.toString());
 		} else {
-			areaResultados.setForeground(Color.BLACK);
-			areaResultados.setText("✓ Análisis sintactico completado sin errores");
+			areaResultados.setForeground(new Color(0, 128, 0)); // Verde oscuro
+			areaResultados.setText("✓ Análisis sintáctico completado sin errores");
 		}
 	}
 
