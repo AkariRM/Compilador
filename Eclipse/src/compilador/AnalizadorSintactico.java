@@ -2,251 +2,385 @@ package compilador;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 public class AnalizadorSintactico {
-	private final Deque<String> pila = new ArrayDeque<>();
-	private final List<Token> tokens;
-	private int indiceToken = 0;
-	private final List<String> errores = new ArrayList<>();
+    private final Deque<String> pila = new ArrayDeque<>();
+    private final List<Token> tokens;
+    private int indiceToken = 0;
+    private final List<String> errores = new ArrayList<>();
+    private boolean debugMode = false;
 
-	// Terminales en el orden exacto de las columnas de la tabla
-	private static final String[] TERMINALES = { "inicio", "fin", "si", "(", ")", "{", "}", "si_no", "mientras", "para",
-			";", "=", "entero", "decimal", "cadena", "booleano", "id", "num", "litcad", "verdadero", "falso", "mostrar",
-			"leer", "&&", "||", "!", "<", ">", "<=", ">=", "==", "!=", "+", "-", "*", "/", "%", "$" };
+    // Terminales
+    private static final String[] TERMINALES = {
+        "inicio", "fin", "si", "si_no", "mientras", "para", "mostrar", "leer",
+        "entero", "decimal", "cadena", "booleano", "verdadero", "falso", "id", "num", "litcad",
+        ";", "(", ")", "{", "}", "=", "&&", "||", ">", "<", ">=", "<=", "==", "!=", "+", "-", "*", "/", "%", "$"
+    };
 
-	// No terminales en el orden exacto de las filas de la tabla
-	private static final String[] NO_TERMINALES = { "PROGRAMA", "SENTENCIAS", "SENTENCIA", "DECLARACION", "ASIGNACION",
-			"CONDICIONAL", "BUCLE", "IO", "EXPR", "EXPR_LOG", "LOG_OP", "EXPR_COMP", "COMP_OP", "EXPR_ARIT", "ARIT_OP",
-			"TERM", "tipo" };
+    // No terminales
+    private static final String[] NO_TERMINALES = {
+        "PROGRAMA", "Sentencias", "Sentencia", "Declaracion", "Declaracion'", "Asignacion", "Condicional",
+        "Condicional'", "Bucle", "IO", "Expresion", "OpLogExp", "ExpresionComp", "OpCompExp",
+        "ExpresionArit", "OpAritExp", "Termino"
+    };
 
-	private static final String[][] TABLA_PREDICTIVA = {
-			// Columnas: inicio, fin, si, (, ), {, }, si_no, mientras, para, ;, =,
-			// entero, decimal, cadena, booleano, id, num, litcad,
-			// verdadero, falso, mostrar, leer, &&, ||, !, <, >, <=, >=, ==, !=,
-			// +, -, *, /, %, $
+    // Tabla predictiva LL(1) completa
+    private static final String[][] TABLA_PREDICTIVA = {
+        /* PROGRAMA */ {
+            "inicio Sentencias fin", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+        },
+        /* Sentencias */ {
+            "Sentencia ; Sentencias", "", "Sentencia ; Sentencias", "", "Sentencia ; Sentencias", "Sentencia ; Sentencias",
+            "Sentencia ; Sentencias", "Sentencia ; Sentencias", "Sentencia ; Sentencias", "Sentencia ; Sentencias",
+            "Sentencia ; Sentencias", "Sentencia ; Sentencias", "", "", "Sentencia ; Sentencias",
+            "Sentencia ; Sentencias", "Sentencia ; Sentencias", "", "", "", "", "ε", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+        },
+        /* Sentencia */ {
+            "", "", "Condicional", "", "Bucle", "Bucle", "IO", "IO", "Declaracion", "Declaracion", "Declaracion",
+            "Declaracion", "", "", "Asignacion", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+        },
+        /* Declaracion */ {
+            "", "", "", "", "", "", "", "", "entero id Declaracion'", "decimal id Declaracion'",
+            "cadena id Declaracion'", "booleano id Declaracion'", "", "", "", "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+        },
+        /* Declaracion' */ {
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ";", "ε", "", "", "= Expresion",
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "ε"
+        },
+        /* Asignacion */ {
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "id = Expresion", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+        },
+        /* Condicional */ {
+            "", "", "si ( Expresion ) { Sentencias } Condicional'", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+        },
+        /* Condicional' */ {
+            "", "", "", "si_no { Sentencias }", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ε",
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "ε"
+        },
+        /* Bucle */ {
+            "", "", "", "", "mientras ( Expresion ) { Sentencias }", "para ( Asignacion ; Expresion ; Asignacion ) { Sentencias }",
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+        },
+        /* IO */ {
+            "", "", "", "", "", "", "mostrar Expresion", "leer id", "", "", "", "", "", "", "", "", "",
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+        },
+        /* Expresion */ {
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ExpresionArit OpAritExp", "", "", "",
+            "", "", "", "", "", "", "", "", "", "", "ExpresionArit OpAritExp", "ExpresionArit OpAritExp", "", "", "", "", "", ""
+        },
+        /* OpLogExp */ {
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ε", "", "",
+            "", "&& ExpresionComp OpLogExp", "|| ExpresionComp OpLogExp", "", "", "", "", "", "", "", "", "", "", "", "", "ε"
+        },
+        /* ExpresionComp */ {
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ExpresionArit OpCompExp", "", "", "",
+            "", "", "", "", "", "", "", "", "", "", "ExpresionArit OpCompExp", "ExpresionArit OpCompExp", "", "", "", "", "", ""
+        },
+        /* OpCompExp */ {
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ε", "", "",
+            "", "", "", "> ExpresionArit", "< ExpresionArit", ">= ExpresionArit", "<= ExpresionArit",
+            "== ExpresionArit", "!= ExpresionArit", "", "", "", "", "", "", "ε"
+        },
+        /* ExpresionArit */ {
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Termino OpAritExp", "", "", "",
+            "", "", "", "", "", "", "", "", "", "", "Termino OpAritExp", "Termino OpAritExp", "", "", "", "", "", ""
+        },
+        /* OpAritExp */ {
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ε", "", "",
+            "", "", "", "", "", "", "", "+ Termino OpAritExp", "- Termino OpAritExp",
+            "* Termino OpAritExp", "/ Termino OpAritExp", "% Termino OpAritExp", "", "ε"
+        },
+        /* Termino */ {
+            "", "", "", "", "", "", "", "", "", "", "", "", "", "", "id", "", "", "( Expresion )", "", "", "", "", "", "", "", "", "", "litcad", "num", "", "", "", "", "", ""
+        }
+    };
 
-			/* PROGRAMA */ { "inicio SENTENCIAS fin", null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null, null, null, null, null, null, null, null },
+    // Conjuntos para búsqueda rápida
+    private static final Set<String> TERMINALES_SET = new HashSet<>(Arrays.asList(TERMINALES));
+    private static final Map<String, Integer> INDICES_NO_TERMINALES = new HashMap<>();
+    static {
+        for (int i = 0; i < NO_TERMINALES.length; i++) {
+            INDICES_NO_TERMINALES.put(NO_TERMINALES[i], i);
+        }
+    }
 
-			/* SENTENCIAS */{ null, "ε", "SENTENCIA ; SENTENCIAS", null, null, null, "ε", null,
-					"SENTENCIA ; SENTENCIAS", "SENTENCIA ; SENTENCIAS", null, null, "SENTENCIA ; SENTENCIAS",
-					"SENTENCIA ; SENTENCIAS", "SENTENCIA ; SENTENCIAS", "SENTENCIA ; SENTENCIAS",
-					"SENTENCIA ; SENTENCIAS", null, null, null, null, "SENTENCIA ; SENTENCIAS",
-					"SENTENCIA ; SENTENCIAS", null, null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null },
+    // Tokens de sincronización para recuperación de errores
+    private static final Set<String> TOKENS_SINCRONIZACION = new HashSet<>(Arrays.asList(";", "}", "fin", "$"));
 
-			/* SENTENCIA */ { null, null, "CONDICIONAL", null, null, null, null, null, "BUCLE", "BUCLE", null, null,
-					"DECLARACION", // Para 'entero'
-					"DECLARACION", // Para 'decimal'
-					"DECLARACION", // Para 'cadena'
-					"DECLARACION", // Para 'booleano'
-					"ASIGNACION", null, null, null, null, "IO", "IO", null, null, null, null, null, null, null, null,
-					null, null, null, null, null, null },
+    /**
+     * Constructor del analizador sintáctico
+     * @param tokens Lista de tokens generados por el analizador léxico
+     */
+    public AnalizadorSintactico(List<Token> tokens) {
+        this.tokens = new ArrayList<>(tokens);
+        inicializarPila();
+    }
 
-			/* DECLARACION */ { null, null, null, null, null, null, null, null, null, null, null, null,
-					"tipo id = EXPR", // Para 'entero'
-					"tipo id = EXPR", // Para 'decimal'
-					"tipo id = EXPR", // Para 'cadena'
-					"tipo id = EXPR", // Para 'booleano'
-					null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null, null, null, null, null },
+    /**
+     * Inicializa la pila con el símbolo inicial
+     */
+    private void inicializarPila() {
+        pila.clear();
+        pila.push("$");
+        pila.push("PROGRAMA");
+    }
 
-			/* tipo */ { null, null, null, null, null, null, null, null, null, null, null, null, "entero", // Para
-																											// 'entero'
-					"decimal", // Para 'decimal'
-					"cadena", // Para 'cadena'
-					"booleano", // Para 'booleano'
-					null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null, null, null, null, null },
-			/* DECL_EXT */ { null, null, null, null, null, null, null, null, null, null, null, "= EXPR", null, null,
-					null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null, null, null, null, null, null },
+    /**
+     * Realiza el análisis sintáctico
+     * @return true si el análisis fue exitoso, false si hubo errores
+     */
+    public boolean analizar() {
+        inicializarPila();
+        indiceToken = 0;
+        errores.clear();
 
-			/* ASIGNACION */ { null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-					null, "id = EXPR", null, null, null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null, null, null, null, null, null },
+        System.out.println("\n=== INICIO DEL ANÁLISIS SINTÁCTICO ===");
+        System.out.println("Pila inicial: " + pila);
+        
+        while (!pila.isEmpty()) {
+            String cima = pila.peek();
+            Token tokenActual = obtenerTokenActual();
+            String claveToken = obtenerClaveToken(tokenActual);
 
-			/* CONDICIONAL */{ null, null, "si ( EXPR ) { SENTENCIAS } COND_EXT", null, null, null, null, null, null,
-					null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null, null, null, null, null, null, null, null, null, null, null },
+            // Mostrar estado actual
+            System.out.println("\n--- Paso actual ---");
+            System.out.println("Pila: " + pila);
+            System.out.println("Token actual: " + tokenActual.getValor() + 
+                             " (Tipo: " + tokenActual.getTipo() + 
+                             ", Línea: " + tokenActual.getFila() + 
+                             ", Col: " + tokenActual.getColumna() + ")");
+            System.out.println("Clave token: " + claveToken);
 
-			/* COND_EXT */ { null, null, null, null, null, null, null, "si_no { SENTENCIAS }", null, null, null, null,
-					null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null, null, null, null, null, null, null, null },
+            if (cima.equals("$") && claveToken.equals("$")) {
+                System.out.println("¡Análisis completado con éxito!");
+                pila.pop();
+                break;
+            } else if (cima.equals(claveToken)) {
+                System.out.println("Coincidencia encontrada: '" + cima + "'");
+                pila.pop();
+                indiceToken++;
+                System.out.println("Avanzando al siguiente token...");
+            } else if (esTerminal(cima)) {
+                System.out.println("Error: Se esperaba '" + cima + "' pero se encontró '" + 
+                                 tokenActual.getValor() + "'");
+                manejarErrorTerminal(cima, tokenActual);
+            } else {
+                String produccion = obtenerProduccion(cima, claveToken);
+                if (produccion == null) {
+                    System.out.println("Error: No hay producción definida para " + 
+                                     cima + " con '" + claveToken + "'");
+                    manejarErrorNoTerminal(tokenActual);
+                } else {
+                    System.out.println("Aplicando producción: " + cima + " -> " + produccion);
+                    pila.pop();
+                    if (!produccion.equals("ε")) {
+                        apilarProduccion(produccion);
+                        System.out.println("Nuevo estado de la pila: " + pila);
+                    } else {
+                        System.out.println("Producción épsilon (no se apila nada)");
+                    }
+                }
+            }
+            
+            // Pequeña pausa para mejor legibilidad
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
 
-			/* BUCLE */ { null, null, null, null, null, null, null, null, "mientras ( EXPR ) { SENTENCIAS }",
-					"para ( ASIGNACION ; EXPR ; ASIGNACION ) { SENTENCIAS }", null, null, null, null, null, null, null,
-					null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null, null, null },
+        verificarTokensSobrantes();
+        
+        if (!errores.isEmpty()) {
+            System.out.println("\n=== ERRORES ENCONTRADOS ===");
+            for (String error : errores) {
+                System.out.println(error);
+            }
+        } else {
+            System.out.println("\nAnálisis completado sin errores sintácticos");
+        }
+        
+        return errores.isEmpty();
+    }
 
-			/* IO */ { null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null, null, null, "mostrar EXPR", "leer tipo id", null, null, null, null, null, null,
-					null, null, null, null, null, null, null, null, null },
+    private void manejarErrorTerminal(String terminalEsperado, Token tokenEncontrado) {
+        String errorMsg = errorEsperado(terminalEsperado, tokenEncontrado);
+        errores.add(errorMsg);
+        System.out.println("Manejando error terminal: " + errorMsg);
+        System.out.println("Intentando recuperación...");
+        
+        sincronizar();
+        pila.pop();
+        
+        System.out.println("Pila después de recuperación: " + pila);
+    }
 
-			/* EXPR */ { null, null, "EXPR_LOG", "EXPR_LOG", null, null, null, null, "EXPR_LOG", "EXPR_LOG", null, null,
-					null, null, null, null, "EXPR_LOG", "EXPR_LOG", "EXPR_LOG", "EXPR_LOG", "EXPR_LOG", null, null,
-					null, null, "EXPR_LOG", null, null, null, null, null, null, null, null, null, null, null, null },
+    private void manejarErrorNoTerminal(Token tokenInesperado) {
+        String errorMsg = errorInesperado(tokenInesperado);
+        errores.add(errorMsg);
+        System.out.println("Manejando error no terminal: " + errorMsg);
+        System.out.println("Intentando recuperación...");
+        
+        sincronizar();
+        if (!pila.isEmpty() && !esTerminal(pila.peek())) {
+            pila.pop();
+        }
+        
+        System.out.println("Pila después de recuperación: " + pila);
+    }
 
-			/* EXPR_LOG */ { null, null, "EXPR_COMP LOG_OP", "EXPR_COMP LOG_OP", null, null, null, null,
-					"EXPR_COMP LOG_OP", "EXPR_COMP LOG_OP", null, null, null, null, null, null, "EXPR_COMP LOG_OP",
-					"EXPR_COMP LOG_OP", "EXPR_COMP LOG_OP", "EXPR_COMP LOG_OP", "EXPR_COMP LOG_OP", null, null, null,
-					null, "EXPR_COMP LOG_OP", null, null, null, null, null, null, null, null, null, null, null, null },
+    private void sincronizar() {
+        System.out.println("Iniciando sincronización...");
+        int tokensSaltados = 0;
+        
+        while (indiceToken < tokens.size()) {
+            Token token = tokens.get(indiceToken);
+            if (TOKENS_SINCRONIZACION.contains(token.getValor())) {
+                System.out.println("Punto de sincronización encontrado: '" + 
+                                 token.getValor() + "'");
+                System.out.println("Tokens saltados: " + tokensSaltados);
+                return;
+            }
+            System.out.println("Saltando token: " + token.getValor());
+            indiceToken++;
+            tokensSaltados++;
+        }
+    }
 
-			/* LOG_OP */ { null, null, null, null, "ε", null, "ε", "ε", null, null, "ε", null, null, null, null, null,
-					null, null, null, null, null, null, null, "&& EXPR_COMP LOG_OP", "|| EXPR_COMP LOG_OP", null, null,
-					null, null, null, null, null, null, null, null, null, null, null },
+    /**
+     * Obtiene el token actual o un token de fin si no hay más tokens
+     */
+    private Token obtenerTokenActual() {
+        return indiceToken < tokens.size() ? tokens.get(indiceToken) 
+               : new Token(Token.Tipos.Delimitador, "$", -1, -1);
+    }
 
-			/* EXPR_COMP */ { null, null, "EXPR_ARIT COMP_OP", "EXPR_ARIT COMP_OP", null, null, null, null,
-					"EXPR_ARIT COMP_OP", "EXPR_ARIT COMP_OP", null, null, null, null, null, null, "EXPR_ARIT COMP_OP",
-					"EXPR_ARIT COMP_OP", "EXPR_ARIT COMP_OP", "EXPR_ARIT COMP_OP", "EXPR_ARIT COMP_OP", null, null,
-					null, null, "EXPR_ARIT COMP_OP", null, null, null, null, null, null, null, null, null, null, null,
-					null },
+    /**
+     * Apila una producción en orden inverso
+     */
+    private void apilarProduccion(String produccion) {
+        String[] simbolos = produccion.split("\\s+");
+        for (int i = simbolos.length - 1; i >= 0; i--) {
+            pila.push(simbolos[i]);
+        }
+    }
 
-			/* COMP_OP */ { null, null, null, null, "ε", null, "ε", "ε", null, null, "ε", null, null, null, null, null,
-					null, null, null, null, null, null, null, "ε", "ε", null, "< EXPR_ARIT", "> EXPR_ARIT",
-					"<= EXPR_ARIT", ">= EXPR_ARIT", "== EXPR_ARIT", "!= EXPR_ARIT", null, null, null, null, null,
-					null },
+    /**
+     * Verifica si quedaron tokens sin procesar
+     */
+    private void verificarTokensSobrantes() {
+        if (indiceToken < tokens.size()) {
+            StringBuilder sb = new StringBuilder("Tokens no procesados:\n");
+            while (indiceToken < tokens.size()) {
+                Token extra = tokens.get(indiceToken++);
+                sb.append("- ").append(extra.getValor())
+                  .append(" en ").append(extra.getUbicacion()).append("\n");
+            }
+            errores.add(sb.toString());
+        }
+    }
 
-			/* EXPR_ARIT */ { null, null, "TERM ARIT_OP", "TERM ARIT_OP", null, null, null, null, "TERM ARIT_OP",
-					"TERM ARIT_OP", null, null, null, null, null, null, "TERM ARIT_OP", "TERM ARIT_OP", "TERM ARIT_OP",
-					"TERM ARIT_OP", "TERM ARIT_OP", null, null, null, null, "TERM ARIT_OP", null, null, null, null,
-					null, null, null, null, null, null, null, null },
+    /**
+     * Determina la clave del token para la tabla predictiva
+     */
+    private String obtenerClaveToken(Token token) {
+        if (token == null || token.getValor().equals("$")) return "$";
 
-			/* ARIT_OP */ { null, null, null, null, "ε", null, "ε", "ε", null, null, "ε", null, null, null, null, null,
-					null, null, null, null, null, null, null, "ε", "ε", null, "ε", "ε", "ε", "ε", "ε", "ε",
-					"+ TERM ARIT_OP", "- TERM ARIT_OP", "* TERM ARIT_OP", "/ TERM ARIT_OP", "% TERM ARIT_OP", null },
+        String valor = token.getValor().toLowerCase();
 
-			/* TERM */ { null, null, null, "( EXPR )", null, null, null, null, null, null, null, null, null, null, null,
-					null, "id", "num", "litcad", "verdadero", "falso", null, null, null, null, "! TERM", null, null,
-					null, null, null, null, null, "- TERM", null, null, null, null, null },
+        // Primero verificar si es un terminal directo
+        for (String terminal : TERMINALES) {
+            if (terminal.equals(valor)) return terminal;
+        }
 
-			/* tipo */ { null, null, null, null, null, null, null, null, null, null, null, null, "entero", "decimal",
-					"cadena", "booleano", null, null, null, null, null, null, null, null, null, null, null, null, null,
-					null, null, null, null, null, null, null, null, null, null } };
+        // Luego verificar por tipo de token
+        switch (token.getTipo()) {
+            case Identificador: return "id";
+            case LiteralNumerico: return "num";
+            case LiteralCadena: return "litcad";
+            case OperadorAritmetico:
+            case OperadorComparacion:
+            case OperadorLogico:
+            case Delimitador:
+                return token.getValor();
+            default:
+                return valor;
+        }
+    }
 
-	public AnalizadorSintactico(List<Token> tokens) {
-		this.tokens = tokens;
-		pila.push("$");
-		pila.push("PROGRAMA");
-	}
+    /**
+     * Genera mensaje de error cuando se esperaba un token específico
+     */
+    private String errorEsperado(String esperado, Token encontrado) {
+        return String.format("Error en %s: Se esperaba '%s' pero se encontró '%s'",
+            encontrado.getUbicacion(), esperado, encontrado.getValor());
+    }
 
-	public boolean analizar() {
-		while (!pila.isEmpty()) {
-			String cima = pila.peek();
-			Token tokenActual = obtenerTokenActual();
-			String claveToken = obtenerClaveToken(tokenActual);
+    /**
+     * Genera mensaje de error para tokens inesperados
+     */
+    private String errorInesperado(Token token) {
+        return String.format("Error en %s: Token inesperado '%s'",
+            token.getUbicacion(), token.getValor());
+    }
 
-			if (cima.equals(claveToken)) {
-				pila.pop();
-				indiceToken++;
-			} else if (esTerminal(cima)) {
-				errores.add(errorEsperado(cima, tokenActual));
-				return false;
-			} else {
-				String produccion = obtenerProduccion(cima, claveToken);
-				if (produccion == null) {
-					errores.add(errorInesperado(tokenActual));
-					return false;
-				} else if (produccion.equals("ε")) {
-					pila.pop();
-				} else {
-					pila.pop();
-					String[] simbolos = produccion.split(" ");
-					for (int i = simbolos.length - 1; i >= 0; i--) {
-						if (!simbolos[i].isEmpty()) {
-							pila.push(simbolos[i]);
-						}
-					}
-				}
-			}
-		}
-		return errores.isEmpty();
-	}
+    /**
+     * Verifica si un símbolo es terminal
+     */
+    private boolean esTerminal(String simbolo) {
+        return TERMINALES_SET.contains(simbolo) || simbolo.equals("ε");
+    }
 
-	private String obtenerClaveToken(Token token) {
-		// Adaptación específica para tu clase Token
-		switch (token.getTipo()) {
-		case LiteralNumerico:
-			return token.getValor().contains(".") ? "decimal" : "num";
-		case LiteralCadena:
-			return "litcad";
-		case LiteralBooleano:
-			return token.getValor(); // "verdadero" o "falso"
-		case Identificador:
-			return "id";
-		case OperadorAritmetico:
-		case OperadorComparacion:
-		case OperadorLogico:
-			return token.getValor();
-		case Delimitador:
-			return token.getValor(); // ";", "(", ")", etc.
-		default:
-			return token.getValor().toLowerCase();
-		}
-	}
+    /**
+     * Obtiene la producción de la tabla predictiva
+     */
+    private String obtenerProduccion(String noTerminal, String terminal) {
+        Integer fila = INDICES_NO_TERMINALES.get(noTerminal);
+        int columna = Arrays.asList(TERMINALES).indexOf(terminal);
+        
+        if (fila == null || columna == -1 || TABLA_PREDICTIVA[fila][columna].isEmpty()) {
+            return null;
+        }
+        return TABLA_PREDICTIVA[fila][columna];
+    }
 
-	private String errorEsperado(String esperado, Token encontrado) {
-		return String.format("Error en %s: Se esperaba '%s' pero se encontró '%s'", encontrado.getUbicacion(), esperado,
-				encontrado.getValor());
-	}
+    // Getters y Setters
 
-	private String errorInesperado(Token token) {
-		return String.format("Error en %s: No se esperaba '%s' en este contexto", token.getUbicacion(),
-				token.getValor());
-	}
+    public List<String> getErrores() {
+        return new ArrayList<>(errores);
+    }
 
-	private Token obtenerTokenActual() {
-		if (indiceToken >= tokens.size()) {
-			return new Token(Token.Tipos.Delimitador, "$", -1, -1);
-		}
-		return tokens.get(indiceToken);
-	}
+    public List<Token> getTokens() {
+        return new ArrayList<>(tokens);
+    }
 
-	private boolean esTerminal(String simbolo) {
-		for (String t : TERMINALES) {
-			if (t.equals(simbolo)) {
-				return true;
-			}
-		}
-		return simbolo.equals("ε");
-	}
+    public boolean isDebugMode() {
+        return debugMode;
+    }
 
-	private String obtenerProduccion(String noTerminal, String terminal) {
-		int fila = -1, columna = -1;
+    public void setDebugMode(boolean debugMode) {
+        this.debugMode = debugMode;
+    }
 
-		// Buscar fila del no terminal
-		for (int i = 0; i < NO_TERMINALES.length; i++) {
-			if (NO_TERMINALES[i].equals(noTerminal)) {
-				fila = i;
-				break;
-			}
-		}
+    public int getIndiceToken() {
+        return indiceToken;
+    }
 
-		// Buscar columna del terminal
-		for (int j = 0; j < TERMINALES.length; j++) {
-			if (TERMINALES[j].equals(terminal)) {
-				columna = j;
-				break;
-			}
-		}
-
-		if (fila == -1) {
-			errores.add("Error interno: No terminal '" + noTerminal + "' no definido");
-			return null;
-		}
-
-		if (columna == -1) {
-			errores.add("Error interno: Terminal '" + terminal + "' no definido");
-			return null;
-		}
-
-		return TABLA_PREDICTIVA[fila][columna];
-	}
-
-	public List<String> getErrores() {
-		return new ArrayList<>(errores);
-	}
+    public void reset() {
+        inicializarPila();
+        indiceToken = 0;
+        errores.clear();
+    }
 }
