@@ -50,7 +50,7 @@ public class Token {
             
             // Valores literales
             case LiteralNumerico:
-                return valor.contains(".") ? "decimal" : "num";
+                return "num";
             case LiteralCadena:    return "litcad";
             case LiteralBooleano:  return valor.equals("verdadero") ? "verdadero" : "falso";
             
