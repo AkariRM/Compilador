@@ -3,10 +3,10 @@ package compilador;
 public class PruebaCompilador {
     public static void main(String[] args) {
         // 1. Configuración del código de prueba
-        String codigo = "inicio\n" +
-                       "  decimal y = 3.14;\n" +
-                       "  y = y * 2;\n" +
-                       "fin";
+    	String codigo = "inicio\n" +
+                "  decimal y = 3.14;\n" +
+                "  y = y * 2;\n" +
+                "fin";
         
         // 2. Análisis léxico
         AnalizadorLexico lex = new AnalizadorLexico();

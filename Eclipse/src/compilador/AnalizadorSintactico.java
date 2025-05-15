@@ -27,54 +27,62 @@ public class AnalizadorSintactico {
 			"Declaracion'", "Asignacion", "Condicional", "Condicional'", "Bucle", "IO", "Expresion", "OpLogExp",
 			"ExpresionComp", "OpCompExp", "ExpresionArit", "OpAritExp", "Termino" };
 
-	// Tabla predictiva LL(1) completa
 	private static final String[][] TABLA_PREDICTIVA = {
-			/* PROGRAMA */ { "inicio Sentencias fin", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-					"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" },
-			/* Sentencias */ { "Sentencia ; Sentencias", "", "Sentencia ; Sentencias", "", "Sentencia ; Sentencias",
-					"Sentencia ; Sentencias", "Sentencia ; Sentencias", "Sentencia ; Sentencias",
-					"Sentencia ; Sentencias", "Sentencia ; Sentencias", "Sentencia ; Sentencias",
-					"Sentencia ; Sentencias", "", "", "Sentencia ; Sentencias", "Sentencia ; Sentencias",
-					"Sentencia ; Sentencias", "", "", "", "", "ε", "", "", "", "", "", "", "", "", "", "", "", "", "",
-					"", "" },
-			/* Sentencia */ { "", "", "Condicional", "", "Bucle", "Bucle", "IO", "IO", "Declaracion", "Declaracion",
-					"Declaracion", "Declaracion", "", "", "Asignacion", "", "", "", "", "", "", "", "", "", "", "", "",
-					"", "", "", "", "", "", "", "", "" },
-			/* Declaracion' */ { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ";", "ε", // Para:
-																														// "entero
-																														// x;"
-					"", "", "= Expresion ;", // Para: "decimal y = 3.14;"
-					"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ε" },
-			/* Declaracion' */ { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ";", "ε",
-					"", "", "= Expresion ;", // Cambiado aquí
-					"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ε" },
-			/* Asignacion */ { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "id = Expresion ;", "", "", "",
-					"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" },
-			/* Expresion */ { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ExpresionArit OpAritExp", // id
-					"ExpresionArit OpAritExp", // num (¡Cambio importante aquí!)
-					"", "( Expresion )", "", "", "", "", "", "", "", "", "ExpresionArit OpAritExp",
-					"ExpresionArit OpAritExp", "ExpresionArit OpAritExp", "ExpresionArit OpAritExp",
-					"ExpresionArit OpAritExp", "ExpresionArit OpAritExp", "ExpresionArit OpAritExp" },
-			/* OpLogExp */ { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ε", "",
-					"", "", "&& ExpresionComp OpLogExp", "|| ExpresionComp OpLogExp", "", "", "", "", "", "", "", "",
-					"", "", "", "", "ε" },
-			/* ExpresionComp */ { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ExpresionArit OpCompExp", "",
-					"", "", "", "", "", "", "", "", "", "", "", "", "ExpresionArit OpCompExp",
-					"ExpresionArit OpCompExp", "", "", "", "", "", "" },
-			/* OpCompExp */ { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ε", "",
-					"", "", "", "", "> ExpresionArit", "< ExpresionArit", ">= ExpresionArit", "<= ExpresionArit",
-					"== ExpresionArit", "!= ExpresionArit", "", "", "", "", "", "", "ε" },
-			/* ExpresionArit */ { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Termino OpAritExp", "", "",
-					"", "", "", "", "", "", "", "", "", "", "", "Termino OpAritExp", "Termino OpAritExp", "", "", "",
-					"", "", "" },
-			/* OpAritExp */ { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ε", "",
-					"", "", "", "", "", "", "", "", "+ Termino OpAritExp", "- Termino OpAritExp", "* Termino OpAritExp",
-					"/ Termino OpAritExp", "% Termino OpAritExp", "", "ε" },
-			/* Termino */ { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "id", // identificador
-					"num", // literal numérico (¡Clave!)
-					"( Expresion )", "", "", "", "", "", "", "", "litcad", "verdadero", "falso", "", "", "", "", "", "",
-					"" } };
-
+		    /* PROGRAMA */ {
+		        "inicio Sentencias fin", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+		        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+		    },
+		    /* Sentencias */ {
+		        "Sentencia ; Sentencias", "", "Sentencia ; Sentencias", "", "Sentencia ; Sentencias", "Sentencia ; Sentencias",
+		        "Sentencia ; Sentencias", "Sentencia ; Sentencias", "Sentencia ; Sentencias", "Sentencia ; Sentencias",
+		        "Sentencia ; Sentencias", "Sentencia ; Sentencias", "", "", "Sentencia ; Sentencias",
+		        "Sentencia ; Sentencias", "Sentencia ; Sentencias", "", "", "", "", "ε", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+		    },
+		    /* Sentencia */ {
+		        "", "", "Condicional", "", "Bucle", "Bucle", "IO", "IO", "Declaracion", "Declaracion", "Declaracion",
+		        "Declaracion", "", "", "Asignacion", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+		    },
+		    /* Declaracion */ {
+		        "", "", "", "", "", "", "", "", "entero id Declaracion'", "decimal id Declaracion'",
+		        "cadena id Declaracion'", "booleano id Declaracion'", "", "", "", "", "", "", "", "", "", "", "",
+		        "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+		    },
+		    /* Declaracion' */ {
+		        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ";", 
+		        "ε", "", "", 
+		        "= Expresion ;", 
+		        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "ε"
+		    },
+		    /* Asignacion */ {
+		        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "id = Expresion ;", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+		    },
+		    /* Expresion */ {
+		        "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
+		        "ExpresionArit OpAritExp",  // id
+		        "ExpresionArit OpAritExp",  // num
+		        "", 
+		        "( Expresion )", 
+		        "", "", "", "", "", "", "", "", 
+		        "ExpresionArit OpAritExp", 
+		        "ExpresionArit OpAritExp", 
+		        "ExpresionArit OpAritExp", 
+		        "ExpresionArit OpAritExp", 
+		        "ExpresionArit OpAritExp", 
+		        "ExpresionArit OpAritExp", 
+		        "ExpresionArit OpAritExp"
+		    },
+		    /* Termino */ {
+		        "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
+		        "id",  // id
+		        "num",  // num
+		        "( Expresion )", 
+		        "", "", "", "", "", "", "", 
+		        "litcad", 
+		        "verdadero", 
+		        "falso", 
+		        "", "", "", "", "", "", ""
+		    }
+		};
 	// Conjuntos para búsqueda rápida
 	private static final Set<String> TERMINALES_SET = new HashSet<>(Arrays.asList(TERMINALES));
 	private static final Map<String, Integer> INDICES_NO_TERMINALES = new HashMap<>();
@@ -316,13 +324,13 @@ public class AnalizadorSintactico {
 	 * Obtiene la producción de la tabla predictiva
 	 */
 	private String obtenerProduccion(String noTerminal, String terminal) {
-		Integer fila = INDICES_NO_TERMINALES.get(noTerminal);
-		int columna = Arrays.asList(TERMINALES).indexOf(terminal);
-
-		if (fila == null || columna == -1 || TABLA_PREDICTIVA[fila][columna].isEmpty()) {
-			return null;
-		}
-		return TABLA_PREDICTIVA[fila][columna];
+	    Integer fila = INDICES_NO_TERMINALES.get(noTerminal);
+	    int columna = Arrays.asList(TERMINALES).indexOf(terminal);
+	    
+	    if (fila == null || columna == -1 || columna >= TABLA_PREDICTIVA[fila].length) {
+	        return null;
+	    }
+	    return TABLA_PREDICTIVA[fila][columna];
 	}
 
 	// Getters y Setters
